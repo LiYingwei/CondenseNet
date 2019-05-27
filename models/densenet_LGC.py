@@ -10,7 +10,6 @@ from torch.autograd import Variable
 import math
 from layers import Conv, LearnedGroupConv
 
-
 __all__ = ['DenseNet_LGC']
 
 
