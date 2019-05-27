@@ -76,6 +76,9 @@ parser.add_argument('--convert-from', default=None, type=str, metavar='PATH',
 parser.add_argument('--evaluate-from', default=None, type=str, metavar='PATH',
                     help='path to saved checkpoint (default: none)')
 
+parser.add_argument('--shuffle1', action='store_true')
+parser.add_argument('--shuffle2', action='store_true')
+
 args = parser.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 args.stages = list(map(int, args.stages.split('-')))

@@ -18,18 +18,43 @@ class _DenseLayer(nn.Module):
         super(_DenseLayer, self).__init__()
         self.group_1x1 = args.group_1x1
         self.group_3x3 = args.group_3x3
+        assert self.group_1x1 == self.group_3x3
+        self.shuffle1 = args.shuffle1
+        self.shuffle2 = args.shuffle2
         ### 1x1 conv i --> b*k
-        self.conv_1 = LearnedGroupConv(in_channels, args.bottleneck * growth_rate,
-                                       kernel_size=1, groups=self.group_1x1,
-                                       condense_factor=args.condense_factor,
-                                       dropout_rate=args.dropout_rate)
+        self.conv_1 = Conv(in_channels, args.bottleneck * growth_rate,
+                                       kernel_size=1, groups=self.group_1x1)
         ### 3x3 conv b*k --> k
         self.conv_2 = Conv(args.bottleneck * growth_rate, growth_rate,
                            kernel_size=3, padding=1, groups=self.group_3x3)
 
+    @staticmethod
+    def channel_shuffle(x, groups):
+        batchsize, num_channels, height, width = x.data.size()
+
+        channels_per_group = num_channels // groups
+
+        # reshape
+        x = x.view(batchsize, groups,
+                   channels_per_group, height, width)
+
+        # transpose
+        # - contiguous() required if transpose() is used before view().
+        #   See https://github.com/pytorch/pytorch/issues/764
+        x = torch.transpose(x, 1, 2).contiguous()
+
+        # flatten
+        x = x.view(batchsize, -1, height, width)
+
+        return x
+
     def forward(self, x):
         x_ = x
+        if self.shuffle1:
+            x = self.channel_shuffle(x, self.group_1x1)
         x = self.conv_1(x)
+        if self.shuffle2:
+            x = self.channel_shuffle(x, self.group_3x3)
         x = self.conv_2(x)
         return torch.cat([x_, x], 1)
 
